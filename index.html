@@ -3,347 +3,321 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Research Hub — Aarone George</title>
+  <title>Research</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --accent: #58a6ff;
-      --accent2: #3fb950;
-      --tag-bg: #1f2937;
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --border: #2a2a2a;
+      --text: #e0e0e0;
+      --text-secondary: #888;
+      --accent: #7c9bff;
+      --radius: 8px;
     }
+
+    html, body { height: 100%; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
       background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
-    }
-
-    /* ── Header ── */
-    header {
-      border-bottom: 1px solid var(--border);
-      padding: 20px 32px;
       display: flex;
-      align-items: center;
-      gap: 14px;
-      position: sticky;
-      top: 0;
-      background: var(--bg);
-      z-index: 100;
     }
-    header svg { flex-shrink: 0; }
-    header h1 { font-size: 1.1rem; font-weight: 600; color: var(--text); }
-    header span { color: var(--muted); font-size: 0.9rem; }
-    #back-btn {
-      display: none;
-      margin-left: auto;
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--accent);
-      padding: 6px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: background 0.15s;
-    }
-    #back-btn:hover { background: var(--surface); }
 
-    /* ── Home view ── */
-    #home {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 48px 24px 80px;
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
     }
-    .hero h2 {
-      font-size: 2rem;
+
+    .sidebar-title {
+      padding: 0 20px 20px;
+      font-size: 1.1rem;
       font-weight: 700;
-      line-height: 1.3;
-      margin-bottom: 12px;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
     }
-    .hero p { color: var(--muted); font-size: 1.05rem; line-height: 1.7; max-width: 600px; }
 
-    .section-label {
-      font-size: 0.75rem;
-      font-weight: 600;
+    .folder-label {
+      padding: 10px 20px 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-secondary);
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--muted);
-      margin: 48px 0 16px;
-    }
-
-    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
       cursor: pointer;
-      transition: border-color 0.15s, transform 0.1s;
-      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
     }
-    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .card-icon { font-size: 1.5rem; margin-bottom: 10px; }
-    .card-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; color: var(--text); }
-    .card-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.55; margin-bottom: 12px; }
-    .tag {
+    .folder-label:hover { color: var(--text); }
+    .folder-label .arrow {
       display: inline-block;
-      background: var(--tag-bg);
-      color: var(--accent);
-      font-size: 0.7rem;
-      font-weight: 500;
-      padding: 3px 8px;
-      border-radius: 4px;
-      margin-right: 4px;
-      margin-top: 2px;
+      transition: transform 0.15s;
+      font-size: 0.6rem;
     }
-    .tag.green { color: var(--accent2); }
+    .folder.open .arrow { transform: rotate(90deg); }
 
-    /* ── Doc view ── */
-    #doc-view { display: none; max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+    .file-list { display: none; padding-bottom: 4px; }
+    .folder.open .file-list { display: block; }
 
-    #doc-content {
-      font-size: 0.97rem;
-      line-height: 1.8;
+    .file-item {
+      display: block;
+      padding: 8px 20px 8px 32px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-decoration: none;
+      border-left: 2px solid transparent;
+      transition: all 0.1s;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .file-item:hover {
+      background: rgba(255,255,255,0.04);
       color: var(--text);
     }
-    #doc-content h1 { font-size: 1.9rem; margin: 0 0 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
-    #doc-content h2 { font-size: 1.35rem; margin: 40px 0 12px; color: var(--text); }
-    #doc-content h3 { font-size: 1.1rem; margin: 28px 0 10px; color: var(--text); }
-    #doc-content p { margin: 0 0 14px; }
-    #doc-content ul, #doc-content ol { margin: 0 0 14px 22px; }
-    #doc-content li { margin-bottom: 5px; }
-    #doc-content a { color: var(--accent); text-decoration: none; }
-    #doc-content a:hover { text-decoration: underline; }
-    #doc-content strong { color: #fff; }
-    #doc-content blockquote {
-      border-left: 3px solid var(--accent);
-      margin: 16px 0;
-      padding: 10px 16px;
-      background: var(--surface);
-      border-radius: 0 6px 6px 0;
-      color: var(--muted);
+    .file-item.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(124,155,255,0.08);
     }
-    #doc-content code {
-      background: var(--surface);
-      border: 1px solid var(--border);
+
+    /* Main */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-secondary);
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    /* Article content */
+    .article {
+      display: none;
+      width: 100%;
+      max-width: 720px;
+      padding: 48px 32px 100px;
+      line-height: 1.8;
+    }
+
+    .article h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      line-height: 1.3;
+      color: #fff;
+    }
+    .article h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: #fff;
+    }
+    .article h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text);
+    }
+    .article h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 20px 0 6px;
+      color: var(--text);
+    }
+    .article p {
+      font-size: 0.92rem;
+      margin-bottom: 14px;
+      color: #bbb;
+    }
+    .article ul, .article ol {
+      margin: 0 0 14px 20px;
+    }
+    .article li {
+      font-size: 0.92rem;
+      color: #bbb;
+      margin-bottom: 4px;
+      line-height: 1.7;
+    }
+    .article a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .article a:hover { text-decoration: underline; }
+    .article strong { color: var(--text); }
+    .article hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0;
+    }
+    .article blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 10px 16px;
+      margin: 16px 0;
+      background: rgba(124,155,255,0.05);
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    .article blockquote p { color: var(--text-secondary); margin-bottom: 0; }
+    .article code {
+      background: #222;
       padding: 2px 6px;
       border-radius: 4px;
-      font-size: 0.87em;
-      font-family: 'SFMono-Regular', Consolas, monospace;
-      color: #f0883e;
+      font-size: 0.84em;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: #e8a56d;
     }
-    #doc-content pre {
-      background: var(--surface);
+    .article pre {
+      background: #161616;
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: var(--radius);
       padding: 16px;
       overflow-x: auto;
       margin: 16px 0;
     }
-    #doc-content pre code {
+    .article pre code {
       background: none;
-      border: none;
       padding: 0;
       color: var(--text);
+      font-size: 0.84em;
     }
-    #doc-content table {
+    .article table {
       width: 100%;
       border-collapse: collapse;
       margin: 16px 0;
-      font-size: 0.875rem;
-      overflow-x: auto;
-      display: block;
+      font-size: 0.85rem;
     }
-    #doc-content th {
-      background: var(--surface);
+    .article th {
+      background: #1e1e1e;
       border: 1px solid var(--border);
       padding: 8px 12px;
       text-align: left;
-      color: var(--accent);
       font-weight: 600;
+      color: var(--text);
     }
-    #doc-content td {
+    .article td {
       border: 1px solid var(--border);
       padding: 8px 12px;
-      vertical-align: top;
-    }
-    #doc-content tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
-    #doc-content hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
-
-    #loader {
-      display: none;
-      text-align: center;
-      padding: 60px 0;
-      color: var(--muted);
-      font-size: 0.9rem;
+      color: #bbb;
     }
 
-    @media (max-width: 600px) {
-      header { padding: 14px 16px; }
-      #home, #doc-view { padding: 24px 16px 60px; }
-      .hero h2 { font-size: 1.5rem; }
+    /* Mobile */
+    @media (max-width: 700px) {
+      body { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: 40vh;
+      }
+      .article { padding: 24px 16px 60px; }
     }
   </style>
 </head>
 <body>
 
-<header>
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-  </svg>
-  <div>
-    <h1>Research Hub</h1>
-    <span>Aarone George</span>
+<aside class="sidebar">
+  <div class="sidebar-title">Research</div>
+  <div id="nav"></div>
+</aside>
+
+<main class="main">
+  <div class="empty-state" id="empty">
+    <span style="font-size:2rem;opacity:0.3">📄</span>
+    <span>Select a file to read</span>
   </div>
-  <button id="back-btn" onclick="showHome()">← Back to Index</button>
-</header>
-
-<!-- HOME -->
-<div id="home">
-  <div class="hero">
-    <h2>Deep Research &amp; Notes</h2>
-    <p>A curated collection of in-depth research spanning startup accelerators, AI pipelines, and biotech. Click any document to read it.</p>
-  </div>
-
-  <div class="section-label">Startup Accelerators</div>
-  <div class="cards" id="cards-accelerator"></div>
-
-  <div class="section-label">Cancer Vaccine Pipeline</div>
-  <div class="cards" id="cards-cancer"></div>
-</div>
-
-<!-- DOC VIEW -->
-<div id="doc-view">
-  <div id="loader">Loading document…</div>
-  <div id="doc-content"></div>
-</div>
+  <div class="article" id="article"></div>
+</main>
 
 <script>
-  const docs = {
-    accelerator: [
-      {
-        icon: "📊",
-        title: "Comprehensive Accelerator Research",
-        desc: "Master comparison of YC, a16z, Sequoia Arc, Techstars, 500 Global & more — selection criteria, funding, acceptance difficulty.",
-        tags: ["YC", "a16z", "Sequoia", "Funding"],
-        file: "accelerator_projects/COMPREHENSIVE_ACCELERATOR_RESEARCH.md"
-      },
-      {
-        icon: "🚀",
-        title: "YC & a16z Speedrun",
-        desc: "Deep dive into Y Combinator and a16z Speedrun application strategies, batch compositions, and portfolio patterns.",
-        tags: ["YC", "a16z"],
-        file: "accelerator_projects/YC_and_a16z_Speedrun_Research.md"
-      },
-      {
-        icon: "🌿",
-        title: "Sequoia Arc & SPC",
-        desc: "Research on Sequoia Arc and South Park Commons fellowship — selection criteria, community culture, and ideal candidate profiles.",
-        tags: ["Sequoia", "SPC"],
-        file: "accelerator_projects/sequoia_arc_and_spc_research.md"
-      },
-      {
-        icon: "🌐",
-        title: "Techstars & 500 Global",
-        desc: "Comparison of Techstars and 500 Global programs worldwide — batch sizes, equity terms, and geographic focus.",
-        tags: ["Techstars", "500 Global"],
-        file: "accelerator_projects/techstars_and_500global_research.md"
-      },
-      {
-        icon: "🔬",
-        title: "AngelPad, EF & Antler",
-        desc: "Research on AngelPad, Entrepreneur First, and Antler — team-building models, pre-company programs, and global reach.",
-        tags: ["AngelPad", "EF", "Antler"],
-        file: "accelerator_projects/research_angelpad_ef_antler.md"
-      },
-      {
-        icon: "🌱",
-        title: "Seedcamp, SWG, BoostVC & Pioneer",
-        desc: "European and niche accelerator deep-dive — Seedcamp, SWG, Boost VC (deep tech / web3), and Pioneer remote program.",
-        tags: ["Seedcamp", "BoostVC", "Pioneer"],
-        file: "accelerator_projects/accelerator_research_seedcamp_swg_boostvc_pioneer.md"
-      },
-      {
-        icon: "💡",
-        title: "Finding Startup Ideas",
-        desc: "Comprehensive guide to generating and validating startup ideas — frameworks, market insights, and practical exercises.",
-        tags: ["Ideas", "Validation"],
-        file: "accelerator_projects/finding_startup_ideas_comprehensive_guide.md"
-      }
+  const folders = {
+    "accelerator_projects": [
+      { name: "Comprehensive Accelerator Research", path: "accelerator_projects/COMPREHENSIVE_ACCELERATOR_RESEARCH.md" },
+      { name: "YC & a16z Speedrun Research", path: "accelerator_projects/YC_and_a16z_Speedrun_Research.md" },
+      { name: "Sequoia, Arc & SPC Research", path: "accelerator_projects/sequoia_arc_and_spc_research.md" },
+      { name: "Techstars & 500 Global Research", path: "accelerator_projects/techstars_and_500global_research.md" },
+      { name: "AngelPad, EF & Antler Research", path: "accelerator_projects/research_angelpad_ef_antler.md" },
+      { name: "Seedcamp, SWG, BoostVC, Pioneer", path: "accelerator_projects/accelerator_research_seedcamp_swg_boostvc_pioneer.md" },
+      { name: "Finding Startup Ideas Guide", path: "accelerator_projects/finding_startup_ideas_comprehensive_guide.md" },
     ],
-    cancer: [
-      {
-        icon: "🧬",
-        title: "DIY mRNA Cancer Vaccine Research",
-        desc: "Paul Conyngham's AI-powered DIY mRNA cancer vaccine for his dog Rosie — step-by-step breakdown of the experimental process.",
-        tags: ["mRNA", "AI", "Biotech"],
-        green: true,
-        file: "cancer_vaccine_pipeline/Docs/Research.md"
-      },
-      {
-        icon: "⚗️",
-        title: "Pipeline Feasibility Analysis",
-        desc: "Technical feasibility analysis of an AI-automated mRNA cancer vaccine pipeline — computational vs wet-lab steps, tools, and constraints.",
-        tags: ["Pipeline", "Feasibility"],
-        green: true,
-        file: "cancer_vaccine_pipeline/Docs/Feasibility.md"
-      }
+    "cancer_vaccine_pipeline": [
+      { name: "Research", path: "cancer_vaccine_pipeline/Docs/Research.md" },
+      { name: "Feasibility", path: "cancer_vaccine_pipeline/Docs/Feasibility.md" },
     ]
   };
 
-  function renderCards(containerId, items) {
-    const el = document.getElementById(containerId);
-    items.forEach(doc => {
-      const btn = document.createElement('button');
-      btn.className = 'card';
-      btn.innerHTML = `
-        <div class="card-icon">${doc.icon}</div>
-        <div class="card-title">${doc.title}</div>
-        <div class="card-desc">${doc.desc}</div>
-        <div>${doc.tags.map(t => `<span class="tag ${doc.green ? 'green' : ''}">${t}</span>`).join('')}</div>
-      `;
-      btn.onclick = () => loadDoc(doc.file, doc.title);
-      el.appendChild(btn);
+  const nav = document.getElementById('nav');
+  let activeItem = null;
+
+  for (const [folder, files] of Object.entries(folders)) {
+    const div = document.createElement('div');
+    div.className = 'folder open';
+
+    const label = document.createElement('div');
+    label.className = 'folder-label';
+    label.innerHTML = `<span class="arrow">▶</span> ${folder.replace(/_/g, ' ')}`;
+    label.onclick = () => div.classList.toggle('open');
+
+    const list = document.createElement('div');
+    list.className = 'file-list';
+
+    files.forEach(f => {
+      const item = document.createElement('div');
+      item.className = 'file-item';
+      item.textContent = f.name;
+      item.onclick = () => loadFile(f.path, item);
+      list.appendChild(item);
     });
+
+    div.appendChild(label);
+    div.appendChild(list);
+    nav.appendChild(div);
   }
 
-  renderCards('cards-accelerator', docs.accelerator);
-  renderCards('cards-cancer', docs.cancer);
+  async function loadFile(path, el) {
+    if (activeItem) activeItem.classList.remove('active');
+    activeItem = el;
+    el.classList.add('active');
 
-  async function loadDoc(filePath, title) {
-    document.getElementById('home').style.display = 'none';
-    document.getElementById('doc-view').style.display = 'block';
-    document.getElementById('back-btn').style.display = 'inline-block';
-    document.getElementById('loader').style.display = 'block';
-    document.getElementById('doc-content').innerHTML = '';
-    window.scrollTo(0, 0);
+    const article = document.getElementById('article');
+    const empty = document.getElementById('empty');
+
+    empty.style.display = 'none';
+    article.style.display = 'block';
+    article.innerHTML = '<p style="color:var(--text-secondary)">Loading...</p>';
 
     try {
-      const res = await fetch(filePath);
-      if (!res.ok) throw new Error('Could not load file');
-      const text = await res.text();
-      document.getElementById('doc-content').innerHTML = marked.parse(text);
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(res.statusText);
+      const md = await res.text();
+      article.innerHTML = marked.parse(md);
+      document.querySelector('.main').scrollTo(0, 0);
     } catch (e) {
-      document.getElementById('doc-content').innerHTML =
-        `<p style="color:#f85149">Failed to load document: ${e.message}</p>`;
-    } finally {
-      document.getElementById('loader').style.display = 'none';
+      article.innerHTML = `<p style="color:#f87171">Failed to load: ${e.message}</p>`;
     }
-  }
-
-  function showHome() {
-    document.getElementById('home').style.display = 'block';
-    document.getElementById('doc-view').style.display = 'none';
-    document.getElementById('back-btn').style.display = 'none';
-    window.scrollTo(0, 0);
   }
 </script>
 </body>
