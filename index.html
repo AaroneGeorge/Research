@@ -415,6 +415,89 @@
   const nav = document.getElementById('nav');
   let activeItem = null;
   let fileItemMap = {}; // path -> DOM element
+  let currentDocPath = null;
+  let lastLoadedPath = null;
+
+  /** Hash route: #/path/to.md or #/path/to.md%23heading-id (fragment after %23) */
+  function buildDocHash(docPath, fragment) {
+    if (!fragment) return '#/' + docPath;
+    return '#/' + docPath + '%23' + encodeURIComponent(fragment);
+  }
+
+  function parseHashRoute() {
+    const h = window.location.hash;
+    if (!h || !h.startsWith('#/')) return { path: null, anchor: null };
+    const rest = h.slice(2);
+    const sep = rest.indexOf('%23');
+    if (sep === -1) {
+      try {
+        return { path: decodeURIComponent(rest.replace(/\+/g, ' ')), anchor: null };
+      } catch {
+        return { path: rest, anchor: null };
+      }
+    }
+    try {
+      return {
+        path: decodeURIComponent(rest.slice(0, sep).replace(/\+/g, ' ')),
+        anchor: decodeURIComponent(rest.slice(sep + 3).replace(/\+/g, ' ')) || null
+      };
+    } catch {
+      return { path: rest.slice(0, sep), anchor: rest.slice(sep + 3) || null };
+    }
+  }
+
+  function resolveRelativeMd(baseDir, href) {
+    let target = href;
+    let frag = '';
+    const hashIdx = target.indexOf('#');
+    if (hashIdx !== -1) {
+      frag = target.slice(hashIdx + 1);
+      target = target.slice(0, hashIdx);
+    }
+    if (!target.endsWith('.md')) return null;
+    const parts = baseDir ? baseDir.split('/') : [];
+    if (target.startsWith('/')) {
+      return { path: target.replace(/^\//, ''), frag: frag || null };
+    }
+    for (const segment of target.split('/')) {
+      if (segment === '' || segment === '.') continue;
+      if (segment === '..') parts.pop();
+      else parts.push(segment);
+    }
+    return { path: parts.join('/'), frag: frag || null };
+  }
+
+  /** TOC / same-doc anchors and relative .md links → stay in SPA hash router */
+  function rewriteArticleLinks(articleEl, docPath) {
+    const baseDir = docPath.includes('/') ? docPath.slice(0, docPath.lastIndexOf('/')) : '';
+    articleEl.querySelectorAll('a[href]').forEach(a => {
+      const href = a.getAttribute('href');
+      if (!href) return;
+      if (/^(https?:|mailto:)/i.test(href)) return;
+      if (href.startsWith('#/')) return;
+
+      if (href.startsWith('#') && href.length > 1) {
+        a.setAttribute('href', buildDocHash(docPath, href.slice(1)));
+        return;
+      }
+
+      if (href.endsWith('.md') || /\.md#/i.test(href)) {
+        const resolved = resolveRelativeMd(baseDir, href);
+        if (resolved) {
+          a.setAttribute('href', buildDocHash(resolved.path, resolved.frag || undefined));
+        }
+      }
+    });
+  }
+
+  function scrollToAnchor(anchor) {
+    if (!anchor) return;
+    const id = decodeURIComponent(anchor);
+    const el =
+      document.getElementById(id) ||
+      document.querySelector(`[id="${CSS.escape(id)}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   async function discoverDocs() {
     nav.innerHTML = '<div style="padding:18px;color:var(--text-dim);font-size:0.78rem">Loading docs...</div>';
@@ -472,7 +555,7 @@
         item.className = 'file-item';
         item.textContent = prettyName(filePath);
         item.onclick = () => {
-          window.location.hash = '/' + filePath;
+          window.location.hash = buildDocHash(filePath, null).slice(1);
           closeSidebar();
         };
         list.appendChild(item);
@@ -485,7 +568,9 @@
     }
   }
 
-  async function loadFile(path) {
+  async function loadFile(path, anchor) {
+    currentDocPath = path;
+
     // Update active sidebar item
     if (activeItem) activeItem.classList.remove('active');
     const el = fileItemMap[path];
@@ -506,20 +591,28 @@
       if (!res.ok) throw new Error(res.statusText);
       const md = await res.text();
       article.innerHTML = marked.parse(md);
+      rewriteArticleLinks(article, path);
       wrapTables();
       document.getElementById('main').scrollTo(0, 0);
+      requestAnimationFrame(() => scrollToAnchor(anchor));
+      lastLoadedPath = path;
     } catch (e) {
       article.innerHTML = `<p style="color:#f87171">Failed to load: ${e.message}</p>`;
     }
   }
 
-  // Route based on hash: #/folder_name/doc_name.md
+  // Route based on hash: #/folder/doc.md or #/folder/doc.md%23heading
   function handleRoute() {
-    const hash = window.location.hash;
-    if (hash && hash.startsWith('#/')) {
-      const path = hash.slice(2); // remove #/
-      loadFile(path);
+    const { path, anchor } = parseHashRoute();
+    if (path) {
+      if (path === lastLoadedPath) {
+        document.getElementById('main').scrollTo(0, 0);
+        scrollToAnchor(anchor);
+        return;
+      }
+      loadFile(path, anchor);
     } else {
+      lastLoadedPath = null;
       // Show empty state
       document.getElementById('empty').style.display = 'flex';
       document.getElementById('article').style.display = 'none';
