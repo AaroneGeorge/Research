@@ -407,54 +407,92 @@
 </main>
 
 <script>
-  const folders = {
-    "accelerator_projects": [
-      { name: "Comprehensive Accelerator Research", path: "accelerator_projects/COMPREHENSIVE_ACCELERATOR_RESEARCH.md" },
-      { name: "YC & a16z Speedrun Research", path: "accelerator_projects/YC_and_a16z_Speedrun_Research.md" },
-      { name: "Sequoia, Arc & SPC Research", path: "accelerator_projects/sequoia_arc_and_spc_research.md" },
-      { name: "Techstars & 500 Global Research", path: "accelerator_projects/techstars_and_500global_research.md" },
-      { name: "AngelPad, EF & Antler Research", path: "accelerator_projects/research_angelpad_ef_antler.md" },
-      { name: "Seedcamp, SWG, BoostVC, Pioneer", path: "accelerator_projects/accelerator_research_seedcamp_swg_boostvc_pioneer.md" },
-      { name: "Finding Startup Ideas Guide", path: "accelerator_projects/finding_startup_ideas_comprehensive_guide.md" },
-    ],
-    "cancer_vaccine_pipeline": [
-      { name: "Research", path: "cancer_vaccine_pipeline/Docs/Research.md" },
-      { name: "Feasibility", path: "cancer_vaccine_pipeline/Docs/Feasibility.md" },
-    ]
-  };
+  const REPO_OWNER = 'AaroneGeorge';
+  const REPO_NAME = 'Research';
+  const BRANCH = 'main';
+  const IGNORE = ['README.md', 'CLAUDE.md', 'MEMORY.md'];
 
   const nav = document.getElementById('nav');
   let activeItem = null;
+  let fileItemMap = {}; // path -> DOM element
 
-  for (const [folder, files] of Object.entries(folders)) {
-    const div = document.createElement('div');
-    div.className = 'folder open';
+  async function discoverDocs() {
+    nav.innerHTML = '<div style="padding:18px;color:var(--text-dim);font-size:0.78rem">Loading docs...</div>';
 
-    const label = document.createElement('div');
-    label.className = 'folder-label';
-    label.innerHTML = `<span class="arrow">&#9654;</span> ${folder.replace(/_/g, ' ')}`;
-    label.onclick = () => div.classList.toggle('open');
+    try {
+      const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/trees/${BRANCH}?recursive=1`);
+      if (!res.ok) throw new Error(res.statusText);
+      const data = await res.json();
 
-    const list = document.createElement('div');
-    list.className = 'file-list';
+      // Filter for .md files inside folders (not root-level)
+      const mdFiles = data.tree
+        .filter(f => f.type === 'blob' && f.path.endsWith('.md') && f.path.includes('/'))
+        .filter(f => !IGNORE.some(ig => f.path.endsWith('/' + ig) || f.path === ig))
+        .map(f => f.path);
 
-    files.forEach(f => {
-      const item = document.createElement('div');
-      item.className = 'file-item';
-      item.textContent = f.name;
-      item.onclick = () => { loadFile(f.path, item); closeSidebar(); };
-      list.appendChild(item);
-    });
+      // Group by top-level folder
+      const folders = {};
+      mdFiles.forEach(p => {
+        const topFolder = p.split('/')[0];
+        if (!folders[topFolder]) folders[topFolder] = [];
+        folders[topFolder].push(p);
+      });
 
-    div.appendChild(label);
-    div.appendChild(list);
-    nav.appendChild(div);
+      nav.innerHTML = '';
+      buildSidebar(folders);
+    } catch (e) {
+      console.error('GitHub API failed, using fallback', e);
+      nav.innerHTML = '<div style="padding:18px;color:#f87171;font-size:0.78rem">Failed to load docs: ' + e.message + '</div>';
+    }
   }
 
-  async function loadFile(path, el) {
+  function prettyName(filePath) {
+    const filename = filePath.split('/').pop().replace(/\.md$/, '');
+    return filename
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function buildSidebar(folders) {
+    fileItemMap = {};
+    for (const [folder, files] of Object.entries(folders)) {
+      const div = document.createElement('div');
+      div.className = 'folder open';
+
+      const label = document.createElement('div');
+      label.className = 'folder-label';
+      label.innerHTML = `<span class="arrow">&#9654;</span> ${folder.replace(/[-_]/g, ' ')}`;
+      label.onclick = () => div.classList.toggle('open');
+
+      const list = document.createElement('div');
+      list.className = 'file-list';
+
+      files.forEach(filePath => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        item.textContent = prettyName(filePath);
+        item.onclick = () => {
+          window.location.hash = '/' + filePath;
+          closeSidebar();
+        };
+        list.appendChild(item);
+        fileItemMap[filePath] = item;
+      });
+
+      div.appendChild(label);
+      div.appendChild(list);
+      nav.appendChild(div);
+    }
+  }
+
+  async function loadFile(path) {
+    // Update active sidebar item
     if (activeItem) activeItem.classList.remove('active');
-    activeItem = el;
-    el.classList.add('active');
+    const el = fileItemMap[path];
+    if (el) {
+      activeItem = el;
+      el.classList.add('active');
+    }
 
     const article = document.getElementById('article');
     const empty = document.getElementById('empty');
@@ -474,6 +512,23 @@
       article.innerHTML = `<p style="color:#f87171">Failed to load: ${e.message}</p>`;
     }
   }
+
+  // Route based on hash: #/folder_name/doc_name.md
+  function handleRoute() {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#/')) {
+      const path = hash.slice(2); // remove #/
+      loadFile(path);
+    } else {
+      // Show empty state
+      document.getElementById('empty').style.display = 'flex';
+      document.getElementById('article').style.display = 'none';
+      if (activeItem) activeItem.classList.remove('active');
+      activeItem = null;
+    }
+  }
+
+  window.addEventListener('hashchange', handleRoute);
 
   // Wrap tables in scrollable containers that can break out of content width
   function wrapTables() {
@@ -495,6 +550,9 @@
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('overlay').classList.remove('visible');
   }
+
+  // Init: discover docs, then handle the current route
+  discoverDocs().then(() => handleRoute());
 </script>
 </body>
 </html>
